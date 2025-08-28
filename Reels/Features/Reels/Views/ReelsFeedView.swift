@@ -4,72 +4,98 @@ struct ReelsFeedView: View {
     @StateObject private var viewModel = ReelsViewModel()
     @State private var currentIndex: Int = 0
     @State private var scrollOffset: CGFloat = 0
-
+    @State private var hasLoadedOnce: Bool = false
+    
     var body: some View {
         NavigationView {
-            GeometryReader { proxy in
-                let screenHeight = proxy.size.height
-                
-                ScrollView(.vertical) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(viewModel.videos.enumerated()), id: \.element.id) { index, video in
-                            VideoCardView(
-                                video: video,
-                                isActive: index == currentIndex,
-                                onAppear: {
-                                    Task { await viewModel.loadMoreIfNeeded(currentIndex: index) }
-                                }
-                            )
-                            .containerRelativeFrame(.vertical)
-                            .id(index)
-                            .background(
-                                GeometryReader { videoProxy in
-                                    Color.clear
-                                        .preference(key: ScrollOffsetPreferenceKey.self, value: [
-                                            index: videoProxy.frame(in: .named("scroll")).minY
-                                        ])
-                                }
-                            )
+            ScrollViewReader { scrollProxy in
+                GeometryReader { proxy in
+                    let screenHeight = proxy.size.height
+                    
+                    ScrollView(.vertical) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(viewModel.videos.enumerated()), id: \.element.id) { index, video in
+                                VideoCardView(
+                                    video: video,
+                                    isActive: index == currentIndex,
+                                    onAppear: {
+                                        Task { await viewModel.loadMoreIfNeeded(currentIndex: index) }
+                                    }
+                                )
+                                .containerRelativeFrame(.vertical)
+                                .id(index)
+                                .background(
+                                    GeometryReader { videoProxy in
+                                        Color.clear
+                                            .preference(key: ScrollOffsetPreferenceKey.self, value: [
+                                                index: videoProxy.frame(in: .named("scroll")).minY
+                                            ])
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    .coordinateSpace(name: "scroll")
+                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { preferences in
+                        // Find which video is currently most visible
+                        var mostVisibleIndex = 0
+                        var minDistance: CGFloat = .infinity
+                        
+                        for (index, offset) in preferences {
+                            let distance = abs(offset)
+                            if distance < minDistance {
+                                minDistance = distance
+                                mostVisibleIndex = index
+                            }
+                        }
+                        
+                        if mostVisibleIndex != currentIndex {
+                            currentIndex = mostVisibleIndex
+                            print("🎬 Currently playing video at index: \(currentIndex)")
+                        }
+                    }
+                    .scrollTargetBehavior(.paging)
+                    .scrollIndicators(.hidden)
+                    .background(Color.black.ignoresSafeArea())
+                    .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
+                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 0) }
+                }
+                .task {
+                    if !hasLoadedOnce {
+                        await viewModel.refresh()
+                        hasLoadedOnce = true
+                    }
+                }
+                .overlay(alignment: .center) {
+                    if viewModel.isLoading && viewModel.videos.isEmpty {
+                        ProgressView().tint(.white)
+                    }
+                }
+                .alert("Error", isPresented: .constant(viewModel.errorMessage != nil), presenting: viewModel.errorMessage) { _ in
+                    Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+                } message: { error in
+                    Text(error)
+                }
+                .onAppear {
+                    // Restore scroll position to the last active index
+                    if viewModel.videos.indices.contains(currentIndex) {
+                        DispatchQueue.main.async {
+                            withAnimation(.easeOut) {
+                                scrollProxy.scrollTo(currentIndex, anchor: .center)
+                            }
                         }
                     }
                 }
-                .coordinateSpace(name: "scroll")
-                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { preferences in
-                    // Find which video is currently most visible
-                    var mostVisibleIndex = 0
-                    var minDistance: CGFloat = .infinity
-                    
-                    for (index, offset) in preferences {
-                        let distance = abs(offset)
-                        if distance < minDistance {
-                            minDistance = distance
-                            mostVisibleIndex = index
+                .onChange(of: viewModel.videos.count) { _, _ in
+                    // After videos load/refetch, ensure we are at the saved index
+                    if viewModel.videos.indices.contains(currentIndex) {
+                        DispatchQueue.main.async {
+                            scrollProxy.scrollTo(currentIndex, anchor: .center)
                         }
                     }
-                    
-                    if mostVisibleIndex != currentIndex {
-                        currentIndex = mostVisibleIndex
-                        print("🎬 Currently playing video at index: \(currentIndex)")
-                    }
                 }
-                .scrollTargetBehavior(.paging)
-                .scrollIndicators(.hidden)
-                .background(Color.black.ignoresSafeArea())
-                .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
-                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 0) }
+                .navigationBarHidden(true)
             }
-            .task { await viewModel.refresh() }
-            .overlay(alignment: .center) {
-                if viewModel.isLoading && viewModel.videos.isEmpty {
-                    ProgressView().tint(.white)
-                }
-            }
-            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil), presenting: viewModel.errorMessage) { _ in
-                Button("OK", role: .cancel) { viewModel.errorMessage = nil }
-            } message: { error in
-                Text(error)
-            }
-            .navigationBarHidden(true)
         }
     }
 }

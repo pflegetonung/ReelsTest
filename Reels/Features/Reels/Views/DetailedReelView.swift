@@ -4,18 +4,33 @@ import AVKit
 struct DetailedReelView: View {
     let video: VideoItem
     @Environment(\.dismiss) private var dismiss
-    @State private var player: AVPlayer = AVPlayer()
+    @State private var isPlaying: Bool = true
     
     var body: some View {
         ZStack {
-            // Video Player Background
+            // Video Player Background with sound and external play control
             if let url = video.hlsURL {
-                VideoPlayerView(url: url, isActive: true)
+                VideoPlayerView(url: url, isActive: true, isMuted: false, isPlaying: isPlaying)
                     .ignoresSafeArea()
             } else {
                 Color.black
                     .ignoresSafeArea()
             }
+            
+            // Resume icon overlay when paused
+            if !isPlaying {
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 88, weight: .regular))
+                    .foregroundColor(.white)
+                    .shadow(color: .black, radius: 6, x: 0, y: 2)
+            }
+            
+            // Tap to toggle play/pause
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isPlaying.toggle()
+                }
             
             // Content Overlay
             VStack {
@@ -144,50 +159,50 @@ struct DetailedReelView: View {
                     
                     // Engagement Section
                     HStack(spacing: 24) {
-                                                    // Like Button
-                            Button(action: {
-                                // Like functionality
-                            }) {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "heart")
-                                        .font(.title2)
-                                    Text("0")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.white)
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
+                        // Like Button
+                        Button(action: {
+                            // Like functionality
+                        }) {
+                            VStack(spacing: 4) {
+                                Image(systemName: "heart")
+                                    .font(.title2)
+                                Text("0")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
                             }
-                            
-                            // Comment Button
-                            Button(action: {
-                                // Comment functionality
-                            }) {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "message")
-                                        .font(.title2)
-                                    Text("0")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.white)
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 1, x: 0, y: 1)
+                        }
+                        
+                        // Comment Button
+                        Button(action: {
+                            // Comment functionality
+                        }) {
+                            VStack(spacing: 4) {
+                                Image(systemName: "message")
+                                    .font(.title2)
+                                Text("0")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
                             }
-                            
-                            // Share Button
-                            Button(action: {
-                                // Share functionality
-                            }) {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.title2)
-                                    Text("Share")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.white)
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 1, x: 0, y: 1)
+                        }
+                        
+                        // Share Button
+                        Button(action: {
+                            // Share functionality
+                        }) {
+                            VStack(spacing: 4) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.title2)
+                                Text("Share")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
                             }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 1, x: 0, y: 1)
+                        }
                         
                         Spacer()
                         

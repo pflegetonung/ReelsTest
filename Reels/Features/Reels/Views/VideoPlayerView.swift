@@ -4,37 +4,27 @@ import AVKit
 struct VideoPlayerView: View {
     let url: URL
     var isActive: Bool = true
+    var isMuted: Bool = true
+    var isPlaying: Bool = true
     @State private var player: AVPlayer = AVPlayer()
     @State private var isReady: Bool = false
-    
-    // Debug: Print when isActive changes
-    private var debugIsActive: Bool {
-        print("🔍 VideoPlayerView isActive: \(isActive)")
-        return isActive
-    }
     
     var body: some View {
         VideoPlayer(player: player)
             .disabled(true) // Disable user interaction with video controls
-            .allowsHitTesting(false) // Allow taps to pass through to parent NavigationLink
+            .allowsHitTesting(false) // Allow taps to pass through to parent overlays
             .ignoresSafeArea()
             .task {
                 setupPlayer()
             }
-            .onChange(of: debugIsActive) { _, active in
-                print("📱 Video isActive changed to: \(active)")
-                if active {
-                    // When becoming active, restart from beginning and play
-                    player.seek(to: .zero) { _ in
-                        player.play()
-                        print("Video started playing")
-                    }
-                } else {
-                    // When becoming inactive, pause and reset to beginning
-                    player.pause()
-                    player.seek(to: .zero)
-                    print("Video paused and reset")
-                }
+            .onChange(of: isActive) { _, _ in
+                applyState()
+            }
+            .onChange(of: isMuted) { _, _ in
+                applyState()
+            }
+            .onChange(of: isPlaying) { _, _ in
+                applyState()
             }
             .onDisappear {
                 cleanupPlayer()
@@ -45,40 +35,46 @@ struct VideoPlayerView: View {
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
         player.automaticallyWaitsToMinimizeStalling = true
-        player.actionAtItemEnd = .none // Don't pause at end, we'll handle looping manually
+        player.actionAtItemEnd = .none // We'll loop manually
         
         // Configure for HLS streaming
         if let asset = item.asset as? AVURLAsset {
             asset.resourceLoader.setDelegate(nil, queue: nil)
         }
         
-        // Set volume to 0 (mute)
-        player.isMuted = true
-        
-        // Add observer for when video ends to restart it
+        // Observer for looping
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: item,
             queue: .main
         ) { _ in
-            // Only restart if this video is still active
             if isActive {
                 player.seek(to: .zero)
-                player.play()
+                if isPlaying { player.play() }
             }
         }
         
-        // Only play if this video is active
+        applyState()
+    }
+    
+    private func applyState() {
+        // Mute/unmute
+        player.isMuted = isMuted
+        
         if isActive {
-            player.play()
-            print("Initial play for active video")
+            if isPlaying {
+                if player.currentTime() == .zero { player.seek(to: .zero) }
+                player.play()
+            } else {
+                player.pause()
+            }
         } else {
-            print("Video setup complete but not active")
+            player.pause()
+            player.seek(to: .zero)
         }
     }
     
     private func cleanupPlayer() {
-        // Remove observer before cleanup
         if let currentItem = player.currentItem {
             NotificationCenter.default.removeObserver(
                 self,
@@ -90,3 +86,4 @@ struct VideoPlayerView: View {
         player.replaceCurrentItem(with: nil)
     }
 }
+
