@@ -4,12 +4,12 @@ import SwiftUI
 struct ReelsApp: App {
     var body: some Scene {
         WindowGroup {
-            ReelsFeedView()
+            TabbarView()
                 .preferredColorScheme(.dark)
         }
     }
 }
 
 #Preview {
-    ReelsFeedView()
+    TabbarView()
 }

@@ -22,14 +22,23 @@ struct ReelsFeedView: View {
                                         Task { await viewModel.loadMoreIfNeeded(currentIndex: index) }
                                     }
                                 )
-                                .containerRelativeFrame(.vertical)
+                                .frame(width: proxy.size.width, height: screenHeight)
                                 .id(index)
                                 .background(
                                     GeometryReader { videoProxy in
+                                        let offset = videoProxy.frame(in: .named("scroll")).minY
                                         Color.clear
                                             .preference(key: ScrollOffsetPreferenceKey.self, value: [
-                                                index: videoProxy.frame(in: .named("scroll")).minY
+                                                index: offset
                                             ])
+                                            .onChange(of: offset) { _, newOffset in
+                                                // Check if this video is centered (within threshold)
+                                                let centerThreshold: CGFloat = screenHeight * 0.3
+                                                if abs(newOffset) < centerThreshold && currentIndex != index {
+                                                    currentIndex = index
+                                                    print("🎬 Centered video at index: \(currentIndex)")
+                                                }
+                                            }
                                     }
                                 )
                             }
@@ -51,10 +60,11 @@ struct ReelsFeedView: View {
                         
                         if mostVisibleIndex != currentIndex {
                             currentIndex = mostVisibleIndex
-                            print("🎬 Currently playing video at index: \(currentIndex)")
+                            print("Currently playing video at index: \(currentIndex)")
                         }
                     }
                     .scrollTargetBehavior(.paging)
+                    .scrollPosition(id: .constant(currentIndex))
                     .scrollIndicators(.hidden)
                     .background(Color.black.ignoresSafeArea())
                     .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
@@ -77,20 +87,26 @@ struct ReelsFeedView: View {
                     Text(error)
                 }
                 .onAppear {
-                    // Restore scroll position to the last active index
-                    if viewModel.videos.indices.contains(currentIndex) {
-                        DispatchQueue.main.async {
-                            withAnimation(.easeOut) {
-                                scrollProxy.scrollTo(currentIndex, anchor: .center)
-                            }
+                    // Ensure we start centered on the current index
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if viewModel.videos.indices.contains(currentIndex) {
+                            scrollProxy.scrollTo(currentIndex, anchor: .center)
                         }
                     }
                 }
                 .onChange(of: viewModel.videos.count) { _, _ in
-                    // After videos load/refetch, ensure we are at the saved index
-                    if viewModel.videos.indices.contains(currentIndex) {
-                        DispatchQueue.main.async {
+                    // After videos load, center on the current index
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if viewModel.videos.indices.contains(currentIndex) {
                             scrollProxy.scrollTo(currentIndex, anchor: .center)
+                        }
+                    }
+                }
+                .onChange(of: currentIndex) { _, newIndex in
+                    // When currentIndex changes, ensure we're centered
+                    DispatchQueue.main.async {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            scrollProxy.scrollTo(newIndex, anchor: .center)
                         }
                     }
                 }
@@ -117,57 +133,62 @@ struct VideoCardView: View {
     var body: some View {
         NavigationLink(destination: DetailedReelView(video: video)) {
             ZStack {
-                // Video Player - fill the entire container
+                // Background color for the full card
+                Color.black
+                
+                // Rounded Video Container with padding
                 if let url = video.hlsURL {
-                    VideoPlayerView(url: url, isActive: isActive)
-                        .ignoresSafeArea()
+                    RoundedVideoFillView(url: url, cornerRadius: 24, isMuted: true, isPlaying: isActive)
+                        .padding(24)
                 } else {
-                    Color.black
-                        .ignoresSafeArea()
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.gray)
+                        .padding(24)
                 }
-
-                // HUD Overlay - positioned consistently with proper safe area handling
-                VStack {
-                    // Top Section
-                    HStack {
-                        // Profile Image (Top Leading)
+                
+                // HUD overlays - positioned absolutely to avoid shifting
+                VStack(alignment: .leading) {
+                    // Top Section - Fixed position from top
+                    HStack(alignment: .top) {
+                        // Profile Image (Top Leading) - Rounded Rectangle 3:4 aspect ratio
                         if let avatarURL = video.channelAvatar {
                             AsyncImage(url: avatarURL) { image in
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                             } placeholder: {
-                                Circle()
+                                RoundedRectangle(cornerRadius: 8)
                                     .fill(Color.gray.opacity(0.3))
                             }
-                            .frame(width: 40, height: 40)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .frame(width: 60, height: 80) // 3:4 aspect ratio
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 2))
                         } else {
-                            Circle()
+                            RoundedRectangle(cornerRadius: 8)
                                 .fill(Color.gray.opacity(0.3))
-                                .frame(width: 40, height: 40)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                .frame(width: 60, height: 80) // 3:4 aspect ratio
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 2))
                         }
-
-                        Spacer()
-
-                        // Description (Top Trailing)
-                        Text(video.title)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                            .lineLimit(3)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 200, alignment: .trailing)
-                            .shadow(color: .black, radius: 2, x: 0, y: 1)
+                        
+                        VStack(alignment: .leading) {
+                            // Description (Top Trailing)
+                            Text(video.channelName)
+                            Text(video.title)
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                    //                            .frame(maxWidth: 200, alignment: .trailing)
+                        .shadow(color: .black, radius: 8)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
+                    .padding(.horizontal, 40) // Adjusted to account for video padding
+                    .padding(.top, 84) // Fixed position from top (24 video padding + 60 safe area)
 
                     Spacer()
 
-                    // Bottom Section
+                    // Bottom Section - Fixed position from bottom
                     VStack(alignment: .leading, spacing: 8) {
                         // Tags
                         HStack {
@@ -177,9 +198,8 @@ struct VideoCardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.6))
+                                .background(Color.black.opacity(0.3))
                                 .clipShape(Capsule())
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
                             
                             Text("#viral")
                                 .font(.caption)
@@ -187,9 +207,8 @@ struct VideoCardView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.black.opacity(0.6))
+                                .background(Color.black.opacity(0.3))
                                 .clipShape(Capsule())
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
                             
                             Spacer()
                         }
@@ -203,15 +222,15 @@ struct VideoCardView: View {
                                 Text("Russia")
                                     .font(.caption)
                             }
-                            .foregroundColor(.white.opacity(0.6))
-                            .shadow(color: .black, radius: 1, x: 0, y: 1)
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
 
                             Spacer()
 
                             // Engagement Metrics (Bottom Trailing)
                             HStack(spacing: 16) {
                                 // Views
-                                VStack(spacing: 2) {
+                                HStack(spacing: 2) {
                                     Image(systemName: "eye.fill")
                                         .font(.caption)
                                     Text("\(video.numbersViews)")
@@ -219,10 +238,10 @@ struct VideoCardView: View {
                                         .fontWeight(.medium)
                                 }
                                 .foregroundColor(.white)
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
+                                .shadow(color: .black, radius: 8)
 
                                 // Likes (placeholder - API doesn't provide likes yet)
-                                VStack(spacing: 2) {
+                                HStack(spacing: 2) {
                                     Image(systemName: "heart.fill")
                                         .font(.caption)
                                     Text("0")
@@ -230,24 +249,21 @@ struct VideoCardView: View {
                                         .fontWeight(.medium)
                                 }
                                 .foregroundColor(.white)
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
+                                .shadow(color: .black, radius: 8)
                             }
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.horizontal, 40) // Adjusted to account for video padding
+                    .padding(.bottom, 58) // Fixed position from bottom (24 video padding + 34 safe area)
                 }
-                .padding(.top, 60) // Add consistent top padding to account for safe area
-                .padding(.bottom, 34) // Add consistent bottom padding to account for safe area
-                
-                // Invisible tap area that covers the entire video
-                Color.clear
-                    .contentShape(Rectangle())
             }
+            .padding(.horizontal)
         }
-        .buttonStyle(PlainButtonStyle()) // Prevents default button styling
+        .frame(height: 600)
+        .buttonStyle(PlainButtonStyle())
         .onAppear(perform: onAppear)
     }
 }
+
 
 

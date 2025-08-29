@@ -19,10 +19,10 @@ struct DetailedReelView: View {
             
             // Resume icon overlay when paused
             if !isPlaying {
-                Image(systemName: "play.circle.fill")
+                Image(systemName: "play.fill")
                     .font(.system(size: 88, weight: .regular))
                     .foregroundColor(.white)
-                    .shadow(color: .black, radius: 6, x: 0, y: 2)
+//                    .shadow(color: .black, radius: 8)
             }
             
             // Tap to toggle play/pause
@@ -39,13 +39,12 @@ struct DetailedReelView: View {
                     Button(action: {
                         dismiss()
                     }) {
-                        Image(systemName: "xmark")
+                        Image(systemName: "chevron.left")
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
+                            .frame(width: 44, height: 44)
+                            .shadow(color: .black, radius: 8)
                     }
                     
                     Spacer()
@@ -58,163 +57,241 @@ struct DetailedReelView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
+                            .frame(width: 44, height: 44)
+                            .shadow(color: .black, radius: 8)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 60)
+//                .padding(.top, 60)
                 
-                Spacer()
+//                Spacer()
                 
                 // Bottom Content Section
-                VStack(alignment: .leading, spacing: 16) {
-                    // User Info Section
-                    HStack(spacing: 12) {
-                        // Profile Image
+                VStack(alignment: .leading, spacing: 20) {
+                    // Top Section - Profile and Channel Info
+                    HStack(alignment: .top, spacing: 12) {
+                        // Profile Image - Rounded Rectangle 3:4 aspect ratio
                         if let avatarURL = video.channelAvatar {
                             AsyncImage(url: avatarURL) { image in
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                             } placeholder: {
-                                Circle()
+                                RoundedRectangle(cornerRadius: 8)
                                     .fill(Color.gray.opacity(0.3))
                             }
-                            .frame(width: 50, height: 50)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .frame(width: 60, height: 80) // 3:4 aspect ratio
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 2))
                         } else {
-                            Circle()
+                            RoundedRectangle(cornerRadius: 8)
                                 .fill(Color.gray.opacity(0.3))
-                                .frame(width: 50, height: 50)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                .frame(width: 60, height: 80) // 3:4 aspect ratio
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white, lineWidth: 2))
                         }
                         
-                        // User Info
+                        // Channel Info
                         VStack(alignment: .leading, spacing: 4) {
                             Text(video.channelName ?? "Unknown Channel")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
-                                .shadow(color: .black, radius: 2, x: 0, y: 1)
+                                .shadow(color: .black, radius: 8)
                             
-                            Text("\(video.numbersViews) views")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.8))
-                                .shadow(color: .black, radius: 1, x: 0, y: 1)
-                        }
-                        
-                        Spacer()
-                        
-                        // Follow Button
-                        Button(action: {
-                            // Follow functionality
-                        }) {
-                            Text("Follow")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
+                            // Location
+                            HStack(spacing: 4) {
+                                Image(systemName: "location.fill")
+                                    .font(.caption)
+                                Text("Russia")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
+                            
+                            // Full Description
+                            Text(video.title)
+                                .font(.body)
+                                .fontWeight(.medium)
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.red)
-                                .clipShape(Capsule())
+                                .lineLimit(nil)
+                                .multilineTextAlignment(.leading)
+                                .shadow(color: .black, radius: 8)
                         }
                     }
                     
-                    // Description
-                    Text(video.title)
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .lineLimit(nil)
-                        .multilineTextAlignment(.leading)
-                        .shadow(color: .black, radius: 2, x: 0, y: 1)
+                    Spacer()
                     
-                    // Tags
-                    HStack {
-                        Text("#shorts")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Capsule())
-                            .shadow(color: .black, radius: 1, x: 0, y: 1)
-                        
-                        Text("#viral")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Capsule())
-                            .shadow(color: .black, radius: 1, x: 0, y: 1)
-                        
-                        Spacer()
-                    }
-                    
-                    // Engagement Section
-                    HStack(spacing: 24) {
-                        // Like Button
-                        Button(action: {
-                            // Like functionality
-                        }) {
-                            VStack(spacing: 4) {
-                                Image(systemName: "heart")
-                                    .font(.title2)
-                                Text("0")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .shadow(color: .black, radius: 1, x: 0, y: 1)
+                    // Bottom Section - Detailed Info
+                    VStack(spacing: 16) {
+                        // Friends Watching
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.2.fill")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Text("Друзья смотрят: @dasha @anna @pavel")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Spacer()
                         }
                         
-                        // Comment Button
-                        Button(action: {
-                            // Comment functionality
-                        }) {
-                            VStack(spacing: 4) {
-                                Image(systemName: "message")
-                                    .font(.title2)
-                                Text("0")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .shadow(color: .black, radius: 1, x: 0, y: 1)
+                        // Live Stream Viewers
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.fill")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Text("15к смотрят эфир")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Spacer()
                         }
                         
-                        // Share Button
-                        Button(action: {
-                            // Share functionality
-                        }) {
-                            VStack(spacing: 4) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.title2)
-                                Text("Share")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .shadow(color: .black, radius: 1, x: 0, y: 1)
-                        }
-                        
-                        Spacer()
-                        
-                        // Location
-                        HStack(spacing: 4) {
+                        // Group/Channel Name with Stats
+                        HStack(spacing: 8) {
                             Image(systemName: "location.fill")
                                 .font(.caption)
-                            Text("Russia")
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Text("RA'MEN")
                                 .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Image(systemName: "arrow.up")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Image(systemName: "square.grid.2x2")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Text("(12)")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .shadow(color: .black, radius: 8)
+                            
+                            Spacer()
                         }
-                        .foregroundColor(.white.opacity(0.6))
-                        .shadow(color: .black, radius: 1, x: 0, y: 1)
+                        
+                        // Tags
+                        HStack {
+                            Text("#португалия")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.3))
+                                .clipShape(Capsule())
+                            
+                            Text("#природа")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.3))
+                                .clipShape(Capsule())
+                            
+                            Text("#лето")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.3))
+                                .clipShape(Capsule())
+                            
+                            Spacer()
+                        }
+                        
+                        // Reactions
+                        HStack(spacing: 12) {
+                            HStack(spacing: 4) {
+                                Text("😍")
+                                    .font(.caption)
+                                Text("10k")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
+                            
+                            HStack(spacing: 4) {
+                                Text("❤️")
+                                    .font(.caption)
+                                Text("100k")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
+                            
+                            HStack(spacing: 4) {
+                                Text("🙈")
+                                    .font(.caption)
+                                Text("5k")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
+                            
+                            HStack(spacing: 4) {
+                                Text("👍")
+                                    .font(.caption)
+                                Text("300k")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
+                            
+                            HStack(spacing: 4) {
+                                Text("😅")
+                                    .font(.caption)
+                                Text("567")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black, radius: 8)
+                            
+                            Spacer()
+                        }
+                        
+                        // Comment Input Field
+                        HStack {
+                            Text("Добавить комментарий")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding(.leading, 12)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                // Send comment functionality
+                            }) {
+                                Image(systemName: "paperplane.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.trailing, 12)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.3))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
                 }
                 .padding(.horizontal, 16)
